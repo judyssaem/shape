@@ -51,27 +51,41 @@ export default function App() {
         body: JSON.stringify({ word: trimmed }),
       });
 
-      const data = await res.json();
+      let data: any = null;
+      try {
+        const text = await res.text();
+        data = JSON.parse(text);
+      } catch (parseErr) {
+        console.warn('Failed to parse API response as JSON:', parseErr);
+        if (res.status === 404) {
+          throw new Error('API 서버 경로(404)를 찾을 수 없어요. Vercel 배포 시 /api 폴더가 포함되었는지 확인해 주세요.');
+        }
+        throw new Error('서버 응답을 읽지 못했어요. 잠시 후 다시 시도해 주세요.');
+      }
 
-      if (!res.ok || !data.ok || !Array.isArray(data.shapes) || data.shapes.length === 0) {
+      if (!res.ok || !data || !data.ok || !Array.isArray(data.shapes) || data.shapes.length === 0) {
         const errorText =
-          data.error || `"${trimmed}"은(는) 도형으로 만들기 어려워요. 다른 것을 써 볼까요?`;
+          data?.error || `"${trimmed}"은(는) 도형으로 만들기 어려워요. 다른 것을 써 볼까요?`;
         setLoadingMessage(errorText);
         setTimeout(() => {
           setIsLoading(false);
-        }, 2600);
+        }, 3200);
         return;
       }
 
       setShapes(data.shapes);
       setTitle(data.name || trimmed);
       setIsLoading(false);
-    } catch (err) {
+    } catch (err: any) {
       console.error('Shape generation failed:', err);
-      setLoadingMessage('지금은 AI 연결이 원활하지 않아요. 추천 그림 중에서 골라 보세요.');
+      const msg =
+        err?.message && err.message.length < 80
+          ? err.message
+          : '지금은 AI 연결이 원활하지 않아요. 추천 그림 중에서 골라 보세요.';
+      setLoadingMessage(msg);
       setTimeout(() => {
         setIsLoading(false);
-      }, 2600);
+      }, 3200);
     }
   }, []);
 
