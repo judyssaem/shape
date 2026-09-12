@@ -131,7 +131,7 @@ export default function App() {
         {/* Printable Worksheet Header (Visible only when printing) */}
         <div className="hidden print-only mb-4 text-center border-b-2 border-dashed border-[#B08968] pb-3">
           <div className="flex items-center justify-between text-base text-[#456F22] font-jua">
-            <span>새싹 수학 정원 · 여러 가지 모양 놀이</span>
+            <span>탐구해요, 모양봇 · 여러 가지 모양 놀이</span>
             <span>1학년 반 이름: ___________</span>
           </div>
           <h1 className="font-jua text-3xl text-[#456F22] mt-1">
@@ -147,10 +147,10 @@ export default function App() {
         <header className="text-center mb-4.5 no-print">
           <h1 className="font-jua text-3xl sm:text-4xl text-[#456F22] tracking-tight m-0 flex items-center justify-center gap-1.5">
             <span className="leaf inline-block -rotate-12">🌱</span>
-            <span>모양 그림 도우미</span>
+            <span>탐구해요, 모양봇</span>
           </h1>
           <p className="sub font-gaegu text-xl sm:text-2xl text-[#B08968] mt-1 m-0">
-            만들고 싶은 것을 쓰면, 동그라미·네모·세모로 알려 줘요
+            만들고 싶은 모양을 물어봐!
           </p>
         </header>
 

@@ -32,11 +32,11 @@ export const ShapeCanvas: React.FC<ShapeCanvasProps> = ({
   };
 
   const getStroke = (s: Shape, idx: number) => {
+    if (level === 'shadow') {
+      return selectedShapeIndex === idx ? '#3C3A32' : 'var(--shadow)';
+    }
     if (selectedShapeIndex === idx) {
       return '#3C3A32';
-    }
-    if (level === 'shadow') {
-      return '#C7BFAB';
     }
     if (s.t === 'c') return '#D99B14';
     if (s.t === 'r') return '#2D75B5';
