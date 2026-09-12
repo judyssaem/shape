@@ -297,7 +297,7 @@ export const SearchAndChips: React.FC<SearchAndChipsProps> = ({
             maxLength={12}
             value={inputValue}
             onChange={(e) => setInputValue(e.target.value)}
-            placeholder={isListening ? '지금 말씀해 주세요…' : '예: 기차, 사과, 비행기'}
+            placeholder={isListening ? '지금 말씀해 주세요…' : '예: 기차, 사과, 토끼'}
             aria-label="만들고 싶은 것"
             disabled={disabled}
             className={`w-full min-w-0 font-gaegu text-2xl font-bold pl-4 pr-12 py-2.5 border-3 rounded-[18px] text-[#3C3A32] focus:outline-none transition-all ${

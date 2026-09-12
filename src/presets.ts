@@ -39,6 +39,24 @@ export const PRESETS: Record<string, Shape[]> = {
     { t: 'c', cx: 64, cy: 72, r: 8, co: '#4A4740' },
     { t: 'c', cx: 74, cy: 58, r: 4, co: '#F5B92E' }
   ],
+  "토끼": [
+    { t: 't', cx: 38, cy: 15, s: 30, rot: -10, co: '#FFF5F0' },
+    { t: 't', cx: 62, cy: 15, s: 30, rot: 10, co: '#FFF5F0' },
+    { t: 't', cx: 38, cy: 16, s: 18, rot: -10, co: '#FFCAD4' },
+    { t: 't', cx: 62, cy: 16, s: 18, rot: 10, co: '#FFCAD4' },
+    { t: 'c', cx: 50, cy: 67, r: 19, co: '#FFF5F0' },
+    { t: 'c', cx: 38, cy: 83, r: 6.5, co: '#FFF5F0' },
+    { t: 'c', cx: 62, cy: 83, r: 6.5, co: '#FFF5F0' },
+    { t: 'c', cx: 50, cy: 40, r: 18, co: '#FFF5F0' },
+    { t: 'c', cx: 43, cy: 38, r: 2.5, co: '#4A4740' },
+    { t: 'c', cx: 57, cy: 38, r: 2.5, co: '#4A4740' },
+    { t: 't', cx: 50, cy: 44, s: 5, rot: 180, co: '#EE7A55' },
+    { t: 't', cx: 43, cy: 55, s: 10, rot: -90, co: '#EE7A55' },
+    { t: 't', cx: 57, cy: 55, s: 10, rot: 90, co: '#EE7A55' },
+    { t: 'r', x: 47, y: 52.5, w: 6, h: 5, co: '#F5B92E' },
+    { t: 't', cx: 50, cy: 71, s: 14, rot: 180, co: '#FF8C00' },
+    { t: 't', cx: 50, cy: 62, s: 6.5, rot: 0, co: '#6FA83C' }
+  ],
   "로봇": [
     { t: 'r', x: 32, y: 42, w: 36, h: 32, co: '#9AA7B0' },
     { t: 'r', x: 38, y: 16, w: 24, h: 22, co: '#C3CDD4' },
