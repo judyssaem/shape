@@ -23,6 +23,51 @@ function getAi(): GoogleGenAI {
   return aiClient;
 }
 
+// In-memory cache to avoid duplicate AI calls and speed up responses
+const shapeCache = new Map<string, any[]>();
+
+function normalizeShapeType(val: any): 'c' | 'r' | 't' | null {
+  if (!val || typeof val !== 'string') return null;
+  const lower = val.toLowerCase().trim();
+  if (lower === 'c' || lower.includes('circle') || lower.includes('원') || lower.includes('동그라미')) return 'c';
+  if (lower === 'r' || lower.includes('rect') || lower.includes('square') || lower.includes('네모') || lower.includes('사각')) return 'r';
+  if (lower === 't' || lower.includes('tri') || lower.includes('세모') || lower.includes('삼각')) return 't';
+  return null;
+}
+
+function cleanShape(raw: any): any | null {
+  if (!raw || typeof raw !== 'object') return null;
+  const t = normalizeShapeType(raw.t || raw.type || raw.shape);
+  if (!t) return null;
+
+  const co = typeof raw.co === 'string' && raw.co.startsWith('#') ? raw.co : undefined;
+  const rot = typeof raw.rot === 'number' ? raw.rot : (Number(raw.rot) || undefined);
+
+  if (t === 'c') {
+    const cx = Number(raw.cx ?? 50);
+    const cy = Number(raw.cy ?? 50);
+    const r = Math.max(2, Math.min(45, Number(raw.r ?? 10)));
+    return { t: 'c', cx, cy, r, co, rot };
+  }
+
+  if (t === 'r') {
+    const x = Number(raw.x ?? 10);
+    const y = Number(raw.y ?? 10);
+    const w = Math.max(2, Math.min(90, Number(raw.w ?? 20)));
+    const h = Math.max(2, Math.min(90, Number(raw.h ?? 20)));
+    return { t: 'r', x, y, w, h, co, rot };
+  }
+
+  if (t === 't') {
+    const cx = Number(raw.cx ?? 50);
+    const cy = Number(raw.cy ?? 50);
+    const s = Math.max(4, Math.min(90, Number(raw.s ?? 20)));
+    return { t: 't', cx, cy, s, co, rot };
+  }
+
+  return null;
+}
+
 app.get("/api/health", (req, res) => {
   res.json({ status: "ok" });
 });
@@ -35,6 +80,15 @@ app.post("/api/generate-shapes", async (req, res) => {
     }
 
     const cleanWord = word.trim().slice(0, 20);
+
+    // Check in-memory cache first
+    if (shapeCache.has(cleanWord)) {
+      return res.json({
+        ok: true,
+        name: cleanWord,
+        shapes: shapeCache.get(cleanWord)
+      });
+    }
 
     if (!process.env.GEMINI_API_KEY) {
       return res.status(503).json({
@@ -61,34 +115,55 @@ app.post("/api/generate-shapes", async (req, res) => {
 {"ok":true,"name":"${cleanWord}","shapes":[{"t":"r","x":20,"y":40,"w":60,"h":30,"co":"#4E96D6"}]}`;
 
     let responseText = "";
+    // gemini-3.1-flash-lite has high quota and stable availability without 429 quota exhaustion
     try {
       const response = await ai.models.generateContent({
-        model: "gemini-3.8-flash",
-        contents: prompt,
-        config: {
-          responseMimeType: "application/json"
-        }
-      });
-      responseText = response.text || "{}";
-    } catch (modelErr: any) {
-      console.warn("gemini-3.8-flash unavailable, attempting gemini-3.1-flash-lite fallback:", modelErr?.message);
-      const fallbackResponse = await ai.models.generateContent({
         model: "gemini-3.1-flash-lite",
         contents: prompt,
         config: {
           responseMimeType: "application/json"
         }
       });
-      responseText = fallbackResponse.text || "{}";
-    }
-    let parsed: any;
-    try {
-      parsed = JSON.parse(responseText.trim().replace(/^```json|```$/g, "").trim());
-    } catch {
-      return res.status(500).json({ ok: false, error: "모양을 만드는 중 해석 오류가 발생했어요." });
+      responseText = response.text || "{}";
+    } catch (primaryErr: any) {
+      console.warn("gemini-3.1-flash-lite error, attempting gemini-2.5-flash fallback:", primaryErr?.message);
+      try {
+        const fallbackResponse = await ai.models.generateContent({
+          model: "gemini-2.5-flash",
+          contents: prompt,
+          config: {
+            responseMimeType: "application/json"
+          }
+        });
+        responseText = fallbackResponse.text || "{}";
+      } catch (secondErr: any) {
+        console.warn("gemini-2.5-flash error, attempting gemini-3.8-flash fallback:", secondErr?.message);
+        const lastResponse = await ai.models.generateContent({
+          model: "gemini-3.8-flash",
+          contents: prompt,
+          config: {
+            responseMimeType: "application/json"
+          }
+        });
+        responseText = lastResponse.text || "{}";
+      }
     }
 
-    if (!parsed || !parsed.ok || !Array.isArray(parsed.shapes) || parsed.shapes.length === 0) {
+    let parsed: any;
+    try {
+      const cleanedJson = responseText
+        .trim()
+        .replace(/^```json/i, "")
+        .replace(/^```/i, "")
+        .replace(/```$/g, "")
+        .trim();
+      parsed = JSON.parse(cleanedJson);
+    } catch (parseError) {
+      console.error("JSON parse error:", responseText);
+      return res.status(500).json({ ok: false, error: "모양을 만드는 중 해석 오류가 발생했어요. 다시 시도해 주세요." });
+    }
+
+    if (!parsed || parsed.ok === false || !Array.isArray(parsed.shapes) || parsed.shapes.length === 0) {
       return res.json({
         ok: false,
         error: `"${cleanWord}"은(는) 도형으로 만들기 어려워요. 다른 것을 써 볼까요?`
@@ -96,8 +171,19 @@ app.post("/api/generate-shapes", async (req, res) => {
     }
 
     const cleanShapes = parsed.shapes
-      .filter((s: any) => s && ["c", "r", "t"].includes(s.t))
+      .map(cleanShape)
+      .filter((s: any) => s !== null)
       .slice(0, 16);
+
+    if (cleanShapes.length === 0) {
+      return res.json({
+        ok: false,
+        error: `"${cleanWord}"은(는) 도형으로 만들기 어려워요. 다른 것을 써 볼까요?`
+      });
+    }
+
+    // Cache successful shapes
+    shapeCache.set(cleanWord, cleanShapes);
 
     return res.json({
       ok: true,
