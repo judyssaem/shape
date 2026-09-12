@@ -1,0 +1,6 @@
+{
+  "name": "모양 그림 도우미",
+  "description": "만들고 싶은 것을 쓰면 동그라미·네모·세모로 알려 주는 새싹 수학 정원 도형 놀이 도우미",
+  "requestFramePermissions": ["microphone"],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

@@ -1,0 +1,64 @@
+@import "tailwindcss";
+
+:root {
+  --cream: #FDF9EC;
+  --paper: #FFFFFF;
+  --sprout: #6FA83C;
+  --sprout-dark: #456F22;
+  --soil: #B08968;
+  --ink: #3C3A32;
+  --line: #E4DCC4;
+  --c-circle: #F5B92E;
+  --c-rect: #4E96D6;
+  --c-tri: #EE7A55;
+  --shadow: #D8D2C0;
+}
+
+body {
+  margin: 0;
+  padding: 0;
+  background-color: var(--cream);
+  background-image: radial-gradient(var(--line) 1.2px, transparent 1.2px);
+  background-size: 22px 22px;
+  font-family: 'Gaegu', cursive, system-ui, sans-serif;
+  color: var(--ink);
+  -webkit-font-smoothing: antialiased;
+}
+
+.font-jua {
+  font-family: 'Jua', sans-serif;
+}
+
+.font-gaegu {
+  font-family: 'Gaegu', cursive, system-ui, sans-serif;
+}
+
+@keyframes spin-slow {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.animate-spin-custom {
+  animation: spin-slow 1s linear infinite;
+}
+
+@media print {
+  body {
+    background: #ffffff !important;
+    background-image: none !important;
+    padding: 0 !important;
+  }
+  .no-print {
+    display: none !important;
+  }
+  .print-only {
+    display: block !important;
+  }
+  .print-card {
+    border: 2px solid #E4DCC4 !important;
+    box-shadow: none !important;
+    page-break-inside: avoid;
+  }
+}
+
