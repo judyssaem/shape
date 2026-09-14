@@ -3,13 +3,14 @@ import path from "path";
 import { createServer as createViteServer } from "vite";
 import dotenv from "dotenv";
 import generateShapesHandler from "./api/generate-shapes.ts";
+import transcribeSpeechHandler from "./api/transcribe-speech.ts";
 
 dotenv.config();
 
 const app = express();
 const PORT = 3000;
 
-app.use(express.json());
+app.use(express.json({ limit: "20mb" }));
 
 app.get("/api/health", (req, res) => {
   res.json({ status: "ok" });
@@ -17,6 +18,10 @@ app.get("/api/health", (req, res) => {
 
 app.all("/api/generate-shapes", (req, res) => {
   return generateShapesHandler(req, res);
+});
+
+app.all("/api/transcribe-speech", (req, res) => {
+  return transcribeSpeechHandler(req, res);
 });
 
 async function startServer() {
