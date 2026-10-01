@@ -1,57 +1,12 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { PRESETS } from '../presets';
+import { extractCoreWord } from '../utils/koreanNlp';
 import { Mic, Volume2 } from 'lucide-react';
 
 interface SearchAndChipsProps {
   onSelectWord: (word: string) => void;
   activeWord: string;
   disabled?: boolean;
-}
-
-/**
- * 아이들의 자연어 발화에서 핵심 낱말을 정밀하게 추출하고
- * 추천 모양(프리셋)과 스마트 매칭해 주는 도우미 함수
- */
-function extractCoreWord(raw: string): string {
-  let text = raw.trim().replace(/[.,?!~^*_#@'"「」]/g, '');
-
-  // 1. 추천 목록에 있는 단어가 포함되어 있으면 즉시 해당 단어로 확정 (예: "토끼 만들어줘" -> "토끼")
-  const presetKeys = Object.keys(PRESETS);
-  for (const preset of presetKeys) {
-    if (text.includes(preset)) {
-      return preset;
-    }
-  }
-
-  // 2. 일상 대화형 어미 및 요청 표현 제거
-  const requestPhrases = [
-    /만들어\s*(줘|주세요|봐|라|줄래|주라|볼래)?/g,
-    /그려\s*(줘|주세요|봐|라|줄래|주라|볼래)?/g,
-    /보여\s*(줘|주세요|봐|라|줄래|주라)?/g,
-    /찾아\s*(줘|주세요|봐|라|줄래|주라)?/g,
-    /해\s*(줘|주세요|봐|라|줄래|주라|볼래)?/g,
-    /만들기/g,
-    /그리기/g,
-    /(하고\s*싶어|할래요|할래)/g,
-    /모양/g,
-  ];
-
-  for (const regex of requestPhrases) {
-    text = text.replace(regex, '');
-  }
-
-  // 3. 낱말 끝의 조사 제거 (예: "사과로" -> "사과", "자동차가" -> "자동차")
-  text = text.trim();
-  text = text.replace(/(으로|로|을|를|이|가|은|는|예요|에요|이야|야|요)$/, '');
-  text = text.trim();
-
-  // 4. 여러 단어인 경우 (예: "빨간 사과" -> "사과" 등 마지막 명사 우선)
-  const tokens = text.split(/\s+/).filter(Boolean);
-  if (tokens.length > 1) {
-    return tokens[tokens.length - 1];
-  }
-
-  return text;
 }
 
 export const SearchAndChips: React.FC<SearchAndChipsProps> = ({
@@ -106,7 +61,7 @@ export const SearchAndChips: React.FC<SearchAndChipsProps> = ({
   // 단어 확정 및 검색 실행
   const commitRecognizedWord = useCallback(
     (rawWord: string) => {
-      const clean = extractCoreWord(rawWord);
+      const clean = extractCoreWord(rawWord) || rawWord.trim();
       if (!clean) {
         setSpeechNotice('소리를 잘 듣지 못했어요. 다시 말씀해 보세요 👂');
         setTimeout(() => setSpeechNotice(null), 2500);
@@ -126,8 +81,9 @@ export const SearchAndChips: React.FC<SearchAndChipsProps> = ({
   const handleSubmit = (e?: React.FormEvent) => {
     if (e) e.preventDefault();
     stopRecognition();
-    const clean = inputValue.trim();
+    const clean = extractCoreWord(inputValue) || inputValue.trim();
     if (clean) {
+      setInputValue(clean);
       onSelectWord(clean);
     }
   };
@@ -198,24 +154,31 @@ export const SearchAndChips: React.FC<SearchAndChipsProps> = ({
         let currentTranscript = '';
         let isFinal = false;
 
-        for (let i = event.resultIndex; i < event.results.length; i++) {
+        for (let i = 0; i < event.results.length; i++) {
           const res = event.results[i];
           if (res && res[0]) {
-            currentTranscript = res[0].transcript || '';
+            currentTranscript += res[0].transcript || '';
             if (res.isFinal) {
               isFinal = true;
             }
           }
         }
 
-        if (!currentTranscript.trim()) return;
+        const trimmedTranscript = currentTranscript.trim();
+        if (!trimmedTranscript) return;
 
-        // 아이 말에서 핵심 낱말 추출
-        const core = extractCoreWord(currentTranscript);
+        // 아이 말에서 핵심 낱말 추출 (예: "오리를 그려줘" -> "오리", "오리 모양을 보여줘" -> "오리")
+        const core = extractCoreWord(trimmedTranscript);
         if (core) {
           latestWordRef.current = core;
           setInputValue(core);
-          setSpeechNotice(`듣고 있어요: "${core}" 🗣️`);
+
+          // 문장으로 말했을 경우 어떤 모양으로 인식되었는지 실시간 피드백 안내
+          if (trimmedTranscript !== core) {
+            setSpeechNotice(`"${trimmedTranscript}" ➔ "${core}" 🗣️`);
+          } else {
+            setSpeechNotice(`듣고 있어요: "${core}" 🗣️`);
+          }
 
           // 1. isFinal 이벤트가 오면 즉시 자동 확정 및 모양 생성
           if (isFinal) {

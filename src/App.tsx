@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { HelpLevel, Shape } from './types';
 import { PRESETS } from './presets';
+import { extractCoreWord } from './utils/koreanNlp';
 import { SearchAndChips } from './components/SearchAndChips';
 import { ShapeCanvas } from './components/ShapeCanvas';
 import { LevelSelector } from './components/LevelSelector';
@@ -22,8 +23,8 @@ export default function App() {
   }, []);
 
   const handleSelectWord = useCallback(async (word: string) => {
-    const trimmed = word.trim();
-    if (!trimmed) return;
+    const targetWord = extractCoreWord(word) || word.trim();
+    if (!targetWord) return;
 
     // Stop speaking if active
     if ('speechSynthesis' in window) {
@@ -32,15 +33,15 @@ export default function App() {
     }
 
     // Preset match
-    if (PRESETS[trimmed]) {
-      setShapes(PRESETS[trimmed]);
-      setTitle(trimmed);
+    if (PRESETS[targetWord]) {
+      setShapes(PRESETS[targetWord]);
+      setTitle(targetWord);
       return;
     }
 
     // AI Generation via server-side Gemini
     setIsLoading(true);
-    setLoadingMessage(`${trimmed} 모양을 찾고 있어요…`);
+    setLoadingMessage(`${targetWord} 모양을 찾고 있어요…`);
 
     try {
       const res = await fetch('/api/generate-shapes', {
@@ -48,7 +49,7 @@ export default function App() {
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ word: trimmed }),
+        body: JSON.stringify({ word: targetWord }),
       });
 
       let data: any = null;
@@ -65,7 +66,7 @@ export default function App() {
 
       if (!res.ok || !data || !data.ok || !Array.isArray(data.shapes) || data.shapes.length === 0) {
         const errorText =
-          data?.error || `"${trimmed}"은(는) 도형으로 만들기 어려워요. 다른 것을 써 볼까요?`;
+          data?.error || `"${targetWord}"은(는) 도형으로 만들기 어려워요. 다른 것을 써 볼까요?`;
         setLoadingMessage(errorText);
         setTimeout(() => {
           setIsLoading(false);
@@ -74,7 +75,7 @@ export default function App() {
       }
 
       setShapes(data.shapes);
-      setTitle(data.name || trimmed);
+      setTitle(data.name || targetWord);
       setIsLoading(false);
     } catch (err: any) {
       console.error('Shape generation failed:', err);
